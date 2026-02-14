@@ -1,82 +1,79 @@
-from typing import Any, List
+from typing import Optional
 import httpx
 
-BASE_URL = "https://api.setlist.fm/rest/1.0/"
+BASE_URL = "https://api.setlist.fm/rest/1.0"
 
 
 class SetlistFMClient:
 
-    def __init__(self, api_key: str):
-        self.headers = {
-            "Accept": "application/json",
-            "x-api-key": api_key,
-        }
+    def __init__(self, api_key: str) -> None:
+        self._client = httpx.Client(
+            base_url=BASE_URL,
+            headers = {
+                "Accept": "application/json",
+                "x-api-key": api_key,
+            },
+            timeout=10.0
+        )
 
-    def _get_artist(self, artist_name: str, page: int = 1):
-        url = f"{BASE_URL}search/artists"
-        parameters = {
-            "artistName": artist_name,
-            "p": page,
-            "sort": "sortName",
-            "timeout": 10,
-        }
-
-        response = httpx.get(url, params=parameters, headers=self.headers)
+    def _get(self, endpoint: str, params: dict) -> dict:
+        response = self._client.get(endpoint, params=params)
         response.raise_for_status()
-
         return response.json()
 
-    def _get_mbid(self, artist_name: str):
-        data = self._get_artist(artist_name)
-        artist = data.get("artist", None)[0]
+    def _get_artist_mbid(self, artist_name: str) -> Optional[str]:
+        data = self._get(
+            endpoint = "/search/artists",
+            params = {
+                "artistName": artist_name,
+                "p": 1,
+                "sort": "sortName",
+            }
+        )
 
-        if not artist:
+        artists = data.get("artist", [])
+
+        if not artists:
             return None
 
-        return artist.get("mbid")
+        return artists[0].get("mbid")
 
-    def _get_setlist_data(self, artist_name: str, page: int = 1):
-        url = f"{BASE_URL}search/setlists"
-        artist_mbid = self._get_mbid(artist_name)
+    def _get_latests_setlist_data(self, artist_mbid: str) -> Optional[dict]:
+        data = self._get(
+            endpoint = "/search/setlists",
+            params = {
+                "artistMbid": artist_mbid,
+                "p": 1,
+            }
+        )
 
-        parameters = {
-            "artistMbid": artist_mbid,
-            "p": page,
-            "timeout": 10,
-        }
-
-        response = httpx.get(url, params=parameters, headers=self.headers)
-        response.raise_for_status()
-
-        return response.json()
-
-    def _get_setlist(self, artist_name: str):
-        setlist = []
-        data = self._get_setlist_data(artist_name)
-        setlist_data = data.get("setlist", [])[0]
-
-        if not setlist_data:
+        setlists = data.get("setlist", [])
+        if not setlists:
             return None
 
-        sets = setlist_data.get("sets", [])
+        return setlists[0]
 
-        if not sets:
+    def get_setlist(self, artist_name: str):
+
+        artist_mbid = self._get_artist_mbid(artist_name)
+        if not artist_mbid:
             return None
 
-        set = sets.get("set", [])
+        artist_setlist = self._get_latests_setlist_data(artist_mbid)
+        if not artist_setlist:
+            return None
 
-        for group in set:
-            songs = group.get("song", [])
+        sets_container = artist_setlist.get("sets", {})
+        sets = sets_container.get("set", [])
 
-            if not songs:
-                return None
+        setlist: list[str] = []
 
-            for song in songs:
-                song_name = song.get("name", "")
-
-                if not song_name:
-                    return None
-
-                setlist.append(song_name)
+        for songs_container in sets:
+            songs = songs_container.get("song", [])
+            if songs:
+                for song in songs:
+                    song_name = song.get("name", '')
+                    if song_name:
+                        setlist.append(song.get("name",''))
 
         return setlist
