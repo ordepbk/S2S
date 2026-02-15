@@ -1,5 +1,5 @@
 from s2s.config.settings import settings
-from s2s.clients.setlistfm import SetlistFMClient
+from s2s.clients.setlistfm.client import SetlistFMClient
 
 def main():
 
