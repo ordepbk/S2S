@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import List, Optional
+from s2s.clients.setlistfm.schemas import SetlistSearchResponse
 import httpx
 
 BASE_URL = "https://api.setlist.fm/rest/1.0"
@@ -38,42 +39,34 @@ class SetlistFMClient:
 
         return artists[0].get("mbid")
 
-    def _get_latests_setlist_data(self, artist_mbid: str) -> Optional[dict]:
-        data = self._get(
-            endpoint = "/search/setlists",
-            params = {
+    def _fetch_setlist_data(self, artist_mbid: str) -> Optional[SetlistSearchResponse]:
+        raw_data = self._get(
+            endpoint="/search/setlists",
+            params={
                 "artistMbid": artist_mbid,
                 "p": 1,
             }
         )
 
-        setlists = data.get("setlist", [])
-        if not setlists:
-            return None
+        parsed = SetlistSearchResponse.model_validate(raw_data)
+        return parsed if parsed.setlist else None
 
-        return setlists[0]
+    def _extract_songs(self, parsed: SetlistSearchResponse) -> List[str]:
+        first_setlist = parsed.setlist[0]
+        return [
+            song.name
+            for set in first_setlist.sets.set
+            for song in set.song
+        ]
 
-    def get_setlist(self, artist_name: str):
-
+    def get_setlist(self, artist_name: str) -> Optional[List[str]]:
         artist_mbid = self._get_artist_mbid(artist_name)
         if not artist_mbid:
             return None
 
-        artist_setlist = self._get_latests_setlist_data(artist_mbid)
-        if not artist_setlist:
+        parsed = self._fetch_setlist_data(artist_mbid)
+        if not parsed:
             return None
 
-        sets_container = artist_setlist.get("sets", {})
-        sets = sets_container.get("set", [])
+        return self._extract_songs(parsed)
 
-        setlist: list[str] = []
-
-        for songs_container in sets:
-            songs = songs_container.get("song", [])
-            if songs:
-                for song in songs:
-                    song_name = song.get("name", '')
-                    if song_name:
-                        setlist.append(song.get("name",''))
-
-        return setlist
