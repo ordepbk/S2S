@@ -1,7 +1,8 @@
 from s2s.config.settings import settings
 from s2s.clients.setlistfm.client import SetlistFMClient
+from s2s.clients.spotify.client import main as sm
 
-def main():
+def test_setlist():
 
     client = SetlistFMClient(settings.SETLISTFM_API_KEY)
 
@@ -15,6 +16,11 @@ def main():
     else:
         print(f"Artist not found")
 
+def test_spotify():
+    sm()
+
+def main():
+    test_spotify()
 
 if __name__ == "__main__":
     main()
