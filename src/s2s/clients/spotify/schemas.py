@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class SpotifyAuthResponse(BaseModel):
+class ExchangeCodeResponse(BaseModel):
     access_token: str
     token_type: str
     scope: str
