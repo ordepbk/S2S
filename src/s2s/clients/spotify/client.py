@@ -1,24 +1,40 @@
-import json
+from typing import Optional
+
 import httpx
-from s2s.config.settings import settings
-TOKEN_URL = "https://accounts.spotify.com/api/token"
+
+BASE_URL = "https://api.spotify.com/v1/me/"
 
 
-def main():
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+class SpotifyClient:
 
-    params = {
-        "grant_type": "client_credentials",
-        "client_id": settings.SPOTIFY_CLIENT_ID,
-        "client_secret": settings.SPOTIFY_CLIENT_SECRET
-    }
+    def __init__(self, token: str) -> None:
+        self._client = httpx.Client(
+            base_url=BASE_URL,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            },
+            timeout=10.0,
+        )
 
-    response = httpx.post(TOKEN_URL, headers=headers, params=params)
-    response.raise_for_status()
+    def _get(self, endpoint: str, params: dict) -> dict:
+        response = self._client.get(url=endpoint, params=params)
+        response.raise_for_status()
+        return response.json()
 
-    data = response.json()
-    access_token = data.get("access_token", '')
-    print(access_token)
+    def create_new_playlist(
+        self, playlist_name: str, playlist_description: str
+    ) -> Optional[str]:
+        data = self._get(
+            endpoint="playlists",
+            params={
+                "name": playlist_name,
+                "description": playlist_description,
+                "public": False,
+            },
+        )
 
+        if not data:
+            return None
+        # TODO: Check API doc
+        return data["playlist_id"]
