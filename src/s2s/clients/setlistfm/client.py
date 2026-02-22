@@ -10,26 +10,26 @@ class SetlistFMClient:
     def __init__(self, api_key: str) -> None:
         self._client = httpx.Client(
             base_url=BASE_URL,
-            headers = {
+            headers={
                 "Accept": "application/json",
                 "x-api-key": api_key,
             },
-            timeout=10.0
+            timeout=10.0,
         )
 
     def _get(self, endpoint: str, params: dict) -> dict:
-        response = self._client.get(endpoint, params=params)
+        response = self._client.get(url=endpoint, params=params)
         response.raise_for_status()
         return response.json()
 
     def _get_artist_mbid(self, artist_name: str) -> Optional[str]:
         data = self._get(
-            endpoint = "/search/artists",
-            params = {
+            endpoint="/search/artists",
+            params={
                 "artistName": artist_name,
                 "p": 1,
                 "sort": "sortName",
-            }
+            },
         )
 
         artists = data.get("artist", [])
@@ -45,7 +45,7 @@ class SetlistFMClient:
             params={
                 "artistMbid": artist_mbid,
                 "p": 1,
-            }
+            },
         )
 
         parsed = SetlistSearchResponse.model_validate(raw_data)
@@ -53,11 +53,7 @@ class SetlistFMClient:
 
     def _extract_songs(self, parsed: SetlistSearchResponse) -> List[str]:
         first_setlist = parsed.setlist[0]
-        return [
-            song.name
-            for set in first_setlist.sets.set
-            for song in set.song
-        ]
+        return [song.name for set in first_setlist.sets.set for song in set.song]
 
     def get_setlist(self, artist_name: str) -> Optional[List[str]]:
         artist_mbid = self._get_artist_mbid(artist_name)
@@ -69,4 +65,3 @@ class SetlistFMClient:
             return None
 
         return self._extract_songs(parsed)
-
