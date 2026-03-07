@@ -6,8 +6,8 @@ from s2s.clients.spotify.schemas import ExchangeCodeResponse
 from s2s.config.settings import settings
 
 
-AUTH_URL = "https://accounts.spotify.com/authorize?"
-TOKEN_URL = "https://accounts.spotify.com/api/token?"
+AUTH_URL = "https://accounts.spotify.com/authorize"
+TOKEN_URL = "https://accounts.spotify.com/api/token"
 SCOPES = ["playlist-modify-public", "playlist-modify-private"]
 
 BYTES_CLIENT_ID = settings.SPOTIFY_CLIENT_ID.encode("utf-8")
@@ -16,7 +16,7 @@ BYTES_CLIENT_SECRET = settings.SPOTIFY_CLIENT_SECRET.encode("utf-8")
 
 class SpotifyAuth:
     @staticmethod
-    def get_auth_code(state: str) -> ...:
+    def get_auth_code(state: str) -> str:
         params = {
             "response_type": "code",
             "client_id": settings.SPOTIFY_CLIENT_ID,
